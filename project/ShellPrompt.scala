@@ -19,7 +19,15 @@ object ShellPrompt {
   val blue = "\033[1;34m"
   val magenta = "\033[0;35m"
   val cyan = "\033[0;36m"
-  
+
+  def branchDirty = {
+    ("git diff --quiet" ! devnull) != 0
+  }
+
+  def indexDirty = {
+    ("git diff --quiet --cached" ! devnull) != 0
+  }
+
   def colorize(text: String, color: String) = {
     s"${color}${text}${reset}"
   }
@@ -37,9 +45,8 @@ object ShellPrompt {
         val projectId = Project.extract(state).currentProject.id
         val version = BuildSettings.buildVersion
         val project = colorize(s"${projectId}-${version}", blue)
-        val branch = colorize(headLabel("refname"), green)
+        val branch = colorize(headLabel("refname"), if (branchDirty) red else if (indexDirty) yellow else green)
         val upstream = colorize(headLabel("upstream"), cyan)
-        
 
         s"${sbt}${project} [${branch}->${upstream}]: "
       }
