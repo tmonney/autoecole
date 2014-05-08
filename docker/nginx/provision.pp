@@ -7,6 +7,7 @@ class { 'nginx':
 # Frontend web application
 nginx::resource::vhost { 'www.autoecole.ch':
   www_root 		=> '/var/www/autoecole.ch',
+  try_files		=> ['$uri', '$uri/', '/index.html']
 }
 
 # Backend services

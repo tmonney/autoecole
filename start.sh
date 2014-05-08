@@ -8,7 +8,9 @@ sbt stage
 # -v wants an absolute path
 WORKING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-docker rm -f $(docker ps -a -q)
+echo "Removing existing containers"
+containers=$(docker ps -a -q)
+[[ -n "$containers" ]] && docker rm -f $containers
 
 echo -n "Database container:"
 docker run -d --name=db \
