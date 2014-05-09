@@ -20,24 +20,27 @@ object ShellPrompt {
   val magenta = "\033[0;35m"
   val cyan = "\033[0;36m"
 
-  sealed trait Ref
-  case class LocalBranch(local: String) extends Ref
-  case class TrackedBranch(local: String, upstream: String) extends Ref
-  case class DetachedHead(sha1: String) extends Ref
+  sealed trait Head
+  case object NoHead extends Head
+  case class LocalBranch(local: String) extends Head
+  case class TrackedBranch(local: String, upstream: String) extends Head
+  case class DetachedHead(sha1: String) extends Head
 
   def isGitRepo = {
     ("git rev-parse --git-dir" ! devnull) == 0
   }
 
-  def currentRef = {
-    ("git rev-parse --symbolic-full-name HEAD" !!).trim match {
-      case "HEAD" => DetachedHead(("git rev-parse --short HEAD" !!).stripLineEnd)
-      case ref => Seq("refname", "upstream") map (refLabel(ref)) match {
-        case Seq(Some(branch), Some(upstream)) => TrackedBranch(branch, upstream)
-        case Seq(Some(branch), None) => LocalBranch(branch)
-        case _ => sys.error("Unexpected git state")
+  def currentHead = {
+    if(isGitRepo) {
+      ("git rev-parse --symbolic-full-name HEAD" !!).trim match {
+        case "HEAD" => DetachedHead(("git rev-parse --short HEAD" !!).stripLineEnd)
+        case ref => Seq("refname", "upstream") map (refLabel(ref)) match {
+          case Seq(Some(branch), Some(upstream)) => TrackedBranch(branch, upstream)
+          case Seq(Some(branch), None) => LocalBranch(branch)
+          case _ => sys.error("Unexpected git state")
+        }
       }
-    }
+    } else NoHead
   }
 
   def workingDirDirty = {
@@ -60,7 +63,8 @@ object ShellPrompt {
   def colorizeBranch(branch: String) =
     colorize(branch, if (workingDirDirty) red else if (indexDirty) yellow else green)
 
-  def branchInfo = currentRef match {
+  def branchInfo = currentHead match {
+    case NoHead => s"""${colorize("<no branch>", magenta)}"""
     case DetachedHead(sha1) => s"""${colorize("DETACHED at ", magenta)}${colorizeBranch(sha1)}"""
     case LocalBranch(branch) => colorizeBranch(branch)
     case TrackedBranch(branch, upstream) => s"${colorizeBranch(branch)}->${colorize(upstream, cyan)}"
